@@ -14,6 +14,7 @@ class AboutPage extends StatelessWidget {
       version: '26.2',
       date: '2026-03',
       items: [
+        '新设备首次启动显示设置向导，引导完成连接配置',
         '代理页迁移到底部导航栏，随时可访问',
         '支持在线下载并更新 Zashboard 控制台面板',
         '更新后自动保留 Zashboard 用户配置',

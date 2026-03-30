@@ -14,7 +14,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
-  bool _showLogs = true;
+  bool _showLogs = false;
 
   @override
   void initState() {
@@ -25,7 +25,7 @@ class _MainShellState extends State<MainShell> {
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
-      setState(() => _showLogs = prefs.getBool('show_logs') ?? true);
+      setState(() => _showLogs = prefs.getBool('show_logs') ?? false);
     }
   }
 
@@ -71,7 +71,7 @@ class _MainShellState extends State<MainShell> {
           setState(() => _currentIndex = index);
           final prefs = await SharedPreferences.getInstance();
           if (mounted) {
-            final showLogs = prefs.getBool('show_logs') ?? true;
+            final showLogs = prefs.getBool('show_logs') ?? false;
             setState(() {
               _showLogs = showLogs;
               if (_currentIndex > _maxIndex) _currentIndex = _maxIndex;

@@ -3,15 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/clash_service.dart';
 import 'pages/main_shell.dart';
+import 'pages/setup_wizard_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ClashService.instance.loadConfig();
-  runApp(const ProxlyApp());
+  // 检测是否首次启动（clash_host 为空则显示设置向导）
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstLaunch = (prefs.getString('clash_host') ?? '').isEmpty;
+  runApp(ProxlyApp(showSetupWizard: isFirstLaunch));
 }
 
 class ProxlyApp extends StatefulWidget {
-  const ProxlyApp({super.key});
+  final bool showSetupWizard;
+  const ProxlyApp({super.key, this.showSetupWizard = false});
 
   static void toggleThemeOf(BuildContext context) {
     context.findAncestorStateOfType<_ProxlyAppState>()?.toggleTheme();
@@ -90,7 +95,8 @@ class _ProxlyAppState extends State<ProxlyApp> {
           ),
         );
       },
-      home: const MainShell(),
+      // 首次启动（未配置地址）显示设置向导，否则直接进入主界面
+      home: widget.showSetupWizard ? const SetupWizardPage() : const MainShell(),
     );
   }
 }

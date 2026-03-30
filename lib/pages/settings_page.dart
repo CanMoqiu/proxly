@@ -24,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _developerMode = false;
   bool _showBall = false;
-  bool _showLogs = true;
+  bool _showLogs = false;
 
   String? _webPanelVersion;
   bool _checkingUpdate = false;
@@ -49,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _tokenController.text = prefs.getString('clash_token') ?? '';
         _developerMode = prefs.getBool('developer_mode') ?? false;
         _showBall = prefs.getBool('show_floating_ball') ?? false;
-        _showLogs = prefs.getBool('show_logs') ?? true;
+        _showLogs = prefs.getBool('show_logs') ?? false;
         _webPanelVersion = panelVersion;
       });
     }

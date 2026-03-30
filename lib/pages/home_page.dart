@@ -160,6 +160,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchData() async {
+    // 每次轮询时同步开发者模式状态，确保设置页改动后能立即生效
+    final prefs = await SharedPreferences.getInstance();
+    final devMode = prefs.getBool('developer_mode') ?? false;
+    if (devMode != _developerMode && mounted) {
+      setState(() => _developerMode = devMode);
+    }
+
     if (!ClashService.instance.isConfigured) {
       if (mounted) {
         setState(() {
