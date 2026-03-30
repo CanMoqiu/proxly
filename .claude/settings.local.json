@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; Write-Output ''ok''\")"
+    ]
+  }
+}
