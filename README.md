@@ -1,8 +1,9 @@
-# Proxly
-
-**专为 OpenClash / Mihomo 设计的 Android 原生监控面板**
-
-无需打开浏览器，在手机上实时掌握代理状态、流量用量与连接详情。
+<div align="center">
+  <img src="icon.png" width="96" alt="Proxly" />
+  <h1>Proxly</h1>
+  <p>专为 OpenClash / Mihomo 设计的 Android 原生监控面板</p>
+  <p>无需打开浏览器，在手机上实时掌握代理状态、流量用量与连接详情。</p>
+</div>
 
 ---
 
