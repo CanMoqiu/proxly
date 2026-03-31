@@ -80,6 +80,8 @@ flutter build apk --release
 
 Proxly 与 Clash / OpenClash / Mihomo 项目无官方关联，仅为个人使用工具。
 
+本项目由 [Claude Code](https://claude.ai/code)（Anthropic）辅助开发。
+
 ## License
 
 [MIT](LICENSE) © 2026 Proxly
