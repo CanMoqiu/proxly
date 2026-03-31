@@ -4,15 +4,35 @@ import 'package:flutter/services.dart';
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
-  static const _version = '26.2';
+  static const _version = '26.2.2';
   static const _appName = 'Proxly';
   static const _description = 'Proxly 是一款专为 OpenClash / Mihomo 设计的 Android 监控面板，'
       '让你在手机上实时掌握代理状态、流量用量与连接详情，无需打开浏览器。';
 
   static const _changelog = [
     _ChangelogItem(
+      version: '26.2.2',
+      date: '2026-04-01',
+      items: [
+        '代理页左上角新增规则视图入口，点击可在代理与规则之间切换',
+      ],
+    ),
+    _ChangelogItem(
+      version: '26.2.1',
+      date: '2026-03-31',
+      items: [
+        '内置 Zashboard 更新至 v3.0.0',
+        '代理页支持从 JSON 文件导入 Zashboard 配置',
+        '修复首次安装控制台无限加载（屏蔽 Service Worker 在隐藏 WebView 中的注册）',
+        '修复 Zashboard 用户配置重启后丢失',
+        '修复 WebView 渲染掉帧',
+        '修复开发者模式下流量编辑长按无响应',
+        '开发者功能首次安装默认关闭',
+      ],
+    ),
+    _ChangelogItem(
       version: '26.2',
-      date: '2026-03',
+      date: '2026-03-30',
       items: [
         '新设备首次启动显示设置向导，引导完成连接配置',
         '代理页迁移到底部导航栏，随时可访问',
@@ -26,7 +46,7 @@ class AboutPage extends StatelessWidget {
     ),
     _ChangelogItem(
       version: '26.1',
-      date: '2026-03',
+      date: '2026-03-30',
       items: [
         '出站链路卡片：实时连接列表，支持排序与 IP 筛选',
         '每条连接显示代理链、规则、实时速度与累计流量',

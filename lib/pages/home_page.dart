@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/clash_service.dart';
 import '../services/ssh_service.dart';
+import '../services/web_panel_service.dart';
 import '../widgets/traffic_edit_dialog.dart';
 import 'proxy_page.dart';
 import '../widgets/connection_detail_sheet.dart';
@@ -417,6 +418,8 @@ class _HomePageState extends State<HomePage> {
                   _DashboardButton(
                     color: textPrimary,
                     onTap: () async {
+                      // 打开控制台前先保存代理页当前 localStorage，确保控制台能读到最新数据
+                      await WebPanelSync.instance.save();
                       await Navigator.push(
                         context,
                         PageRouteBuilder(
@@ -441,6 +444,8 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                       );
+                      // 控制台关闭后，把它保存的配置同步回代理页 WebView
+                      await WebPanelSync.instance.reload();
                       if (mounted) {
                         _lastDownload = -1;
                         _lastUpload = -1;

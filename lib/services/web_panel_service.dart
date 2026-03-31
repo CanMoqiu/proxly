@@ -227,3 +227,36 @@ class FileHttpServer {
     return 'application/octet-stream';
   }
 }
+
+/// 代理页（IndexedStack 常驻）与控制台（Navigator.push）之间的数据同步桥。
+///
+/// 用法：
+///   ProxyPage(asTab:true) 在 initState 中 register，在 dispose 中 unregister。
+///   HomePage 在打开控制台前调用 save()，关闭后调用 reload()。
+class WebPanelSync {
+  WebPanelSync._();
+  static final instance = WebPanelSync._();
+
+  Future<void> Function()? _save;
+  Future<void> Function()? _reload;
+
+  /// 代理页（asTab:true）使用 InAppLocalhostServer 时记录其端口，
+  /// 供控制台复用，避免同一端口被重复绑定导致启动失败。
+  int sharedAssetServerPort = 0;
+
+  void register({
+    required Future<void> Function() save,
+    required Future<void> Function() reload,
+  }) {
+    _save = save;
+    _reload = reload;
+  }
+
+  void unregister() {
+    _save = null;
+    _reload = null;
+  }
+
+  Future<void> save() async => _save?.call();
+  Future<void> reload() async => _reload?.call();
+}

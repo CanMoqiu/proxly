@@ -2,7 +2,7 @@ name: proxly
 description: "Clash proxy monitor and control panel."
 publish_to: 'none'
 
-version: 26.2.0+18
+version: 26.2.2+21
 
 environment:
   sdk: ^3.6.2
@@ -17,6 +17,7 @@ dependencies:
   flutter_svg: ^2.0.0
   path_provider: ^2.1.0
   archive: ^3.6.1
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:
@@ -28,3 +29,6 @@ flutter:
   assets:
     - assets/web_panel/
     - assets/web_panel/assets/
+    - assets/web_panel/fonts/
+    - assets/web_panel/images/
+    - assets/icons/
