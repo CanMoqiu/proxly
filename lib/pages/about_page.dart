@@ -102,13 +102,27 @@ class _AboutPageState extends State<AboutPage> {
       }
       client.close();
       if (!mounted) return;
-      final dir = await getTemporaryDirectory();
+      // 用外部存储，让系统安装器更易通过 FileProvider 访问
+      final dir = await getExternalStorageDirectory() ?? await getTemporaryDirectory();
       final file = File('${dir.path}/proxly-update.apk');
       await file.writeAsBytes(bytes);
       if (!mounted) return;
       setState(() => _updateState = _UpdateState.installing);
-      await OpenFile.open(file.path);
-    } catch (_) {
+      try {
+        final result = await OpenFile.open(
+          file.path,
+          type: 'application/vnd.android.package-archive',
+        );
+        if (mounted && result.type != ResultType.done) {
+          debugPrint('OpenFile result: ${result.type} ${result.message}');
+          setState(() => _updateState = _UpdateState.failed);
+        }
+      } catch (e) {
+        debugPrint('OpenFile exception: $e');
+        if (mounted) setState(() => _updateState = _UpdateState.failed);
+      }
+    } catch (e) {
+      debugPrint('Download exception: $e');
       if (mounted) setState(() => _updateState = _UpdateState.failed);
     }
   }
@@ -186,7 +200,7 @@ class _AboutPageState extends State<AboutPage> {
           child: row([
             const Icon(Icons.download_rounded, size: 14, color: Colors.white),
             const SizedBox(width: 4),
-            Text('下载中 $_latestTag',
+            Text('新版本 $_latestTag',
                 style: const TextStyle(fontSize: 13, color: Colors.white)),
           ]),
         );
@@ -247,7 +261,7 @@ class _AboutPageState extends State<AboutPage> {
         return pill(
           borderColor: red,
           onTap: _checkUpdate,
-          child: const Text('检查失败，请重试',
+          child: const Text('更新失败，请重试',
               style: TextStyle(fontSize: 13, color: red)),
         );
     }
