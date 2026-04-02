@@ -92,9 +92,9 @@ class _MainShellState extends State<MainShell> with RouteAware {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: isDark ? const Color(0xFF191E24) : Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         unselectedItemColor:
-            isDark ? const Color(0xFF747E8B) : Colors.black54,
+            isDark ? const Color(0xFF9E9E9E) : Colors.black54,
         currentIndex: _currentIndex,
         onTap: (index) async {
           setState(() => _currentIndex = index);
@@ -107,7 +107,7 @@ class _MainShellState extends State<MainShell> with RouteAware {
             });
           }
         },
-        selectedItemColor: const Color(0xFF378ADD),
+        selectedItemColor: isDark ? const Color(0xFF4DA3F5) : const Color(0xFF1A73E8),
         items: _navItems,
       ),
     );

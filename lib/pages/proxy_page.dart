@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import '../services/web_panel_service.dart';
@@ -134,7 +135,8 @@ class _ProxyPageState extends State<ProxyPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final host = prefs.getString('clash_host') ?? '127.0.0.1:9090';
-    final token = prefs.getString('clash_token') ?? '';
+    const secureStorage = FlutterSecureStorage();
+    final token = await secureStorage.read(key: 'clash_token') ?? '';
 
     String hostname = host;
     String port = '9090';
@@ -422,9 +424,9 @@ class _ProxyPageState extends State<ProxyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = _isDark ? const Color(0xFF1D232A) : const Color(0xFFFAFAFA);
-    final textColor = _isDark ? const Color(0xFFA6ADBB) : Colors.black87;
-    final dividerColor = _isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+    final bgColor = _isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final textColor = _isDark ? const Color(0xFFE1E1E1) : Colors.black87;
+    final dividerColor = _isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final scaffold = Scaffold(
       backgroundColor: bgColor,
@@ -462,7 +464,7 @@ class _ProxyPageState extends State<ProxyPage> {
         actions: [
           // 导入 Zashboard 配置文件
           IconButton(
-            icon: Icon(Icons.file_upload_outlined, color: textColor, size: 22),
+            icon: Icon(Icons.file_download_outlined, color: textColor, size: 22),
             tooltip: '导入配置',
             onPressed: _importZashboardConfig,
           ),
@@ -533,7 +535,7 @@ class _ProxyPageState extends State<ProxyPage> {
               child: Material(
                 elevation: 6,
                 borderRadius: BorderRadius.circular(14),
-                color: _isDark ? const Color(0xFF191E24) : Colors.white,
+                color: _isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Column(
@@ -545,8 +547,8 @@ class _ProxyPageState extends State<ProxyPage> {
                         style: TextStyle(
                           fontSize: 13,
                           color: _isDark
-                              ? const Color(0xFFA6ADBB)
-                              : const Color(0xFF0F172A),
+                              ? const Color(0xFFE1E1E1)
+                              : const Color(0xFF1C1B1F),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -555,10 +557,10 @@ class _ProxyPageState extends State<ProxyPage> {
                         child: LinearProgressIndicator(
                           value: _updateProgress,
                           backgroundColor: _isDark
-                              ? const Color(0xFF15191E)
-                              : const Color(0xFFE2E8F0),
+                              ? const Color(0xFF282828)
+                              : const Color(0xFFE0E0E0),
                           valueColor: const AlwaysStoppedAnimation(
-                              Color(0xFF378ADD)),
+                              Color(0xFF1A73E8)),
                           minHeight: 5,
                         ),
                       ),
@@ -637,7 +639,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   @override
   Widget build(BuildContext context) {
     final hintColor =
-        widget.isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        widget.isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     return Container(
       color: widget.bgColor,
@@ -651,7 +653,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                 width: 40,
                 height: 40,
                 child: CustomPaint(
-                  painter: _ArcPainter(color: const Color(0xFF378ADD)),
+                  painter: _ArcPainter(color: const Color(0xFF1A73E8)),
                 ),
               ),
             ),

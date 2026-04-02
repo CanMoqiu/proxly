@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import '../services/clash_service.dart';
 import 'main_shell.dart';
@@ -104,9 +105,10 @@ class _SetupWizardPageState extends State<SetupWizardPage> {
     }
     setState(() => _saving = true);
     try {
+      const storage = FlutterSecureStorage();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('clash_host', host);
-      await prefs.setString('clash_token', _tokenController.text.trim());
+      await storage.write(key: 'clash_token', value: _tokenController.text.trim());
       await ClashService.instance.loadConfig();
       if (!mounted) return;
       // 配置保存完成，替换路由栈，进入主界面
@@ -136,7 +138,7 @@ class _SetupWizardPageState extends State<SetupWizardPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1D232A) : const Color(0xFFFAFAFA);
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -177,10 +179,10 @@ class _SetupWizardPageState extends State<SetupWizardPage> {
               height: 6,
               decoration: BoxDecoration(
                 color: active
-                    ? const Color(0xFF378ADD)
+                    ? const Color(0xFF1A73E8)
                     : (isDark
-                        ? const Color(0xFF334155)
-                        : const Color(0xFFCBD5E1)),
+                        ? const Color(0xFF2C2C2C)
+                        : const Color(0xFFBDBDBD)),
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -202,8 +204,8 @@ class _WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+    final textColor = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final hintColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 0, 32, 24),
@@ -215,10 +217,10 @@ class _WelcomePage extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF378ADD).withOpacity(0.12),
+              color: const Color(0xFF1A73E8).withOpacity(0.12),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                  color: const Color(0xFF378ADD).withOpacity(0.25), width: 0.8),
+                  color: const Color(0xFF1A73E8).withOpacity(0.25), width: 0.8),
             ),
             child: const Icon(Icons.hub_rounded,
                 size: 42, color: Color(0xFF378ADD)),
@@ -247,11 +249,11 @@ class _WelcomePage extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF378ADD).withOpacity(0.1),
+                        color: const Color(0xFF1A73E8).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Icon(h.icon,
-                          size: 19, color: const Color(0xFF378ADD)),
+                          size: 19, color: const Color(0xFF1A73E8)),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -281,7 +283,7 @@ class _WelcomePage extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF378ADD),
+                  color: const Color(0xFF1A73E8),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Center(
@@ -370,17 +372,17 @@ class _ConfigPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final cardBorder =
-        isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final inputBg =
-        isDark ? const Color(0xFF1D232A) : const Color(0xFFF5F5F5);
+        isDark ? const Color(0xFF121212) : const Color(0xFFEEEEEE);
     final labelColor =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
     final textColor =
-        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+        isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
     final hintColor =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
@@ -391,7 +393,9 @@ class _ConfigPage extends StatelessWidget {
       borderSide: const BorderSide(color: Color(0xFF378ADD), width: 1),
     );
 
-    return SingleChildScrollView(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,7 +557,7 @@ class _ConfigPage extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                  color: const Color(0xFF378ADD),
+                  color: const Color(0xFF1A73E8),
                   borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.all(16),
               child: Center(
@@ -582,6 +586,7 @@ class _ConfigPage extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

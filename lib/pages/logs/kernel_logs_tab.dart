@@ -121,9 +121,9 @@ class _KernelLogsTabState extends State<KernelLogsTab>
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textSecondary =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
     final cardBorder =
-        isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Column(
       children: [
@@ -156,7 +156,7 @@ class _KernelLogsTabState extends State<KernelLogsTab>
                         : Icons.pause_rounded,
                     size: 20,
                     color: _autoScroll
-                        ? const Color(0xFF378ADD)
+                        ? const Color(0xFF1A73E8)
                         : textSecondary,
                   ),
                 ),
@@ -239,11 +239,11 @@ class _LogRow extends StatelessWidget {
   const _LogRow({required this.entry, required this.isDark});
 
   static Color _levelColor(String type) => switch (type) {
-        'debug' => const Color(0xFF747E8B),
-        'info' => const Color(0xFF378ADD),
+        'debug' => const Color(0xFF9E9E9E),
+        'info' => const Color(0xFF1A73E8),
         'warning' => const Color(0xFFF59E0B),
         'error' => const Color(0xFFE24B4A),
-        _ => const Color(0xFF747E8B),
+        _ => const Color(0xFF9E9E9E),
       };
 
   @override
@@ -292,8 +292,8 @@ class _LogRow extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       color: isDark
-                          ? const Color(0xFFA6ADBB)
-                          : const Color(0xFF374151))),
+                          ? const Color(0xFFE1E1E1)
+                          : const Color(0xFF1C1B1F))),
             ),
           ],
         ),
@@ -327,10 +327,10 @@ class _LevelPill extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: active
-                  ? const Color(0xFF378ADD)
+                  ? const Color(0xFF1A73E8)
                   : (isDark
-                      ? const Color(0xFF1D232A)
-                      : const Color(0xFFF5F5F5)),
+                      ? const Color(0xFF282828)
+                      : const Color(0xFFEEEEEE)),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(l,
@@ -339,8 +339,8 @@ class _LevelPill extends StatelessWidget {
                     color: active
                         ? Colors.white
                         : (isDark
-                            ? const Color(0xFF747E8B)
-                            : const Color(0xFF94A3B8)))),
+                            ? const Color(0xFF9E9E9E)
+                            : const Color(0xFF6E6E6E)))),
           ),
         );
       }).toList(),

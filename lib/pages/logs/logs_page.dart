@@ -33,7 +33,7 @@ class _LogsPageState extends State<LogsPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
-        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+        isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
 
     return SafeArea(
       child: Column(

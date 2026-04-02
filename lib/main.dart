@@ -90,17 +90,17 @@ class _ProxlyAppState extends State<ProxlyApp> {
       themeAnimationDuration: Duration.zero,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         colorScheme: const ColorScheme.light(
-            primary: Color(0xFF378ADD), surface: Colors.white),
+            primary: Color(0xFF1A73E8), surface: Colors.white),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF1D232A),
+        scaffoldBackgroundColor: const Color(0xFF121212),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF378ADD),
-          surface: Color(0xFF191E24),
+          primary: Color(0xFF4DA3F5),
+          surface: Color(0xFF1E1E1E),
         ),
         useMaterial3: true,
       ),
@@ -199,7 +199,7 @@ class _FloatingThemeBallState extends State<_FloatingThemeBall> {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF378ADD)
+            color: const Color(0xFF1A73E8)
                 .withValues(alpha: _isDragging ? 1.0 : 0.82),
             boxShadow: [
               BoxShadow(

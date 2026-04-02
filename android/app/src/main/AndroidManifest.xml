@@ -37,7 +37,7 @@
             android:value="2" />
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.proxly.proxly.open_file_fileprovider"
+            android:authorities="${applicationId}.open_file_fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

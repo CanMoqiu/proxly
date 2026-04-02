@@ -78,9 +78,9 @@ class _TrafficEditDialogState extends State<TrafficEditDialog> {
     final displayPercent = (currentPercent * 100).toInt();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF191E24) : Colors.white;
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF64748B);
+    final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final hintColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     return AlertDialog(
       backgroundColor: bgColor,
@@ -110,13 +110,13 @@ class _TrafficEditDialogState extends State<TrafficEditDialog> {
                       border: OutlineInputBorder(
                         borderSide: BorderSide(
                             color: isDark
-                                ? const Color(0xFF15191E)
+                                ? const Color(0xFF2C2C2C)
                                 : Colors.grey),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderSide: BorderSide(
                             color: isDark
-                                ? const Color(0xFF334155)
+                                ? const Color(0xFF2C2C2C)
                                 : Colors.grey.shade400),
                       ),
                       isDense: true,
@@ -158,9 +158,9 @@ class _TrafficEditDialogState extends State<TrafficEditDialog> {
                     onChanged: _updateFromPercent,
                     min: 0,
                     max: 1,
-                    activeColor: const Color(0xFF378ADD),
+                    activeColor: const Color(0xFF1A73E8),
                     inactiveColor:
-                        isDark ? const Color(0xFF15191E) : null,
+                        isDark ? const Color(0xFF282828) : null,
                   ),
                 ),
                 SizedBox(
@@ -182,7 +182,7 @@ class _TrafficEditDialogState extends State<TrafficEditDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('取消', style: TextStyle(color: Color(0xFF747E8B))),
+          child: const Text('取消', style: TextStyle(color: Color(0xFF9E9E9E))),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, tempUsedBytes),

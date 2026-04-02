@@ -55,12 +55,12 @@ class _DeveloperOptionsPageState extends State<DeveloperOptionsPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1D232A) : const Color(0xFFFAFAFA);
-    final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
-    final dividerColor = isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final dividerColor = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final textColor = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final hintColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -102,7 +102,7 @@ class _DeveloperOptionsPageState extends State<DeveloperOptionsPage> {
                     style: TextStyle(fontSize: 11, color: hintColor)),
                 value: _developerMode,
                 onChanged: _toggleDeveloperMode,
-                activeColor: const Color(0xFF378ADD),
+                activeColor: const Color(0xFF1A73E8),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               ),
@@ -114,7 +114,7 @@ class _DeveloperOptionsPageState extends State<DeveloperOptionsPage> {
                     style: TextStyle(fontSize: 11, color: hintColor)),
                 value: _showBall,
                 onChanged: _toggleShowBall,
-                activeColor: const Color(0xFF378ADD),
+                activeColor: const Color(0xFF1A73E8),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               ),
@@ -126,7 +126,7 @@ class _DeveloperOptionsPageState extends State<DeveloperOptionsPage> {
                     style: TextStyle(fontSize: 11, color: hintColor)),
                 value: _showLogs,
                 onChanged: _toggleShowLogs,
-                activeColor: const Color(0xFF378ADD),
+                activeColor: const Color(0xFF1A73E8),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               ),

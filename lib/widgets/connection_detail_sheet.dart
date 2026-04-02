@@ -40,17 +40,17 @@ class ConnectionDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF191E24) : Colors.white;
+    final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textPrimary =
-        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+        isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
     final textSecondary =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF64748B);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
     final dividerColor =
-        isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final sectionBg =
-        isDark ? const Color(0xFF1D232A) : const Color(0xFFF8FAFC);
+        isDark ? const Color(0xFF282828) : const Color(0xFFF5F5F5);
     final connectorColor =
-        isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFBDBDBD);
 
     final chainLower = conn.chain.toLowerCase();
     final nodeColor = chainLower.contains('reject')
@@ -59,7 +59,7 @@ class ConnectionDetailSheet extends StatelessWidget {
                 chainLower.contains('直连') ||
                 chainLower.contains('本地'))
             ? const Color(0xFF1D9E75)
-            : const Color(0xFF378ADD);
+            : const Color(0xFF1A73E8);
 
     final destDisplay = conn.destinationIp.isNotEmpty
         ? (conn.destinationPort.isNotEmpty && conn.destinationPort != '0'
@@ -140,13 +140,13 @@ class ConnectionDetailSheet extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _Badge(conn.network, const Color(0xFF378ADD)),
+                      _Badge(conn.network, const Color(0xFF1A73E8)),
                       if (conn.type.isNotEmpty) ...[
                         const SizedBox(width: 5),
                         _Badge(conn.type,
                             isDark
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFE2E8F0),
+                                ? const Color(0xFF2C2C2C)
+                                : const Color(0xFFE0E0E0),
                             textColor: textSecondary),
                       ],
                     ],
@@ -386,7 +386,7 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isBlue = bgColor == const Color(0xFF378ADD);
+    final isBlue = bgColor == const Color(0xFF1A73E8);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(

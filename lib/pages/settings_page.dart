@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import '../services/clash_service.dart';
 import '../services/web_panel_service.dart';
@@ -16,6 +17,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const _builtinPanelVersion = 'v3.0.0';
+  static const _secureStorage = FlutterSecureStorage();
 
   final _hostController = TextEditingController();
   final _tokenController = TextEditingController();
@@ -42,10 +44,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final panelVersion = await WebPanelService.getInstalledVersion();
+    final token = await _secureStorage.read(key: 'clash_token') ?? '';
     if (mounted) {
       setState(() {
         _hostController.text = prefs.getString('clash_host') ?? '';
-        _tokenController.text = prefs.getString('clash_token') ?? '';
+        _tokenController.text = token;
         _webPanelVersion = panelVersion;
       });
     }
@@ -133,7 +136,8 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('clash_host', host);
-      await prefs.setString('clash_token', _tokenController.text.trim());
+      await _secureStorage.write(
+          key: 'clash_token', value: _tokenController.text.trim());
       await ClashService.instance.loadConfig();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -214,12 +218,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
-    final inputBg = isDark ? const Color(0xFF1D232A) : const Color(0xFFF5F5F5);
-    final labelColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final inputBg = isDark ? const Color(0xFF121212) : const Color(0xFFEEEEEE);
+    final labelColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
+    final textColor = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final hintColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
@@ -230,7 +234,9 @@ class _SettingsPageState extends State<SettingsPage> {
       borderSide: const BorderSide(color: Color(0xFF378ADD), width: 1),
     );
 
-    return SafeArea(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
         child: Column(
@@ -292,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: ProxlyApp.activeThemeMode == ThemeMode.system,
                         onChanged: (v) => _setTheme(
                             v ? ThemeMode.system : ThemeMode.light),
-                        activeColor: const Color(0xFF378ADD),
+                        activeColor: const Color(0xFF1A73E8),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ],
@@ -410,7 +416,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color: const Color(0xFF378ADD), width: 0.8),
+                                  color: const Color(0xFF1A73E8), width: 0.8),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
@@ -438,7 +444,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF378ADD),
+                              color: const Color(0xFF1A73E8),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
@@ -501,7 +507,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color: const Color(0xFF378ADD), width: 0.8),
+                                  color: const Color(0xFF1A73E8), width: 0.8),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: _checkingUpdate
@@ -533,7 +539,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF378ADD),
+                                color: const Color(0xFF1A73E8),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Text('立即更新',
@@ -552,8 +558,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: LinearProgressIndicator(
                         value: _downloadProgress,
                         backgroundColor: isDark
-                            ? const Color(0xFF15191E)
-                            : const Color(0xFFE2E8F0),
+                            ? const Color(0xFF282828)
+                            : const Color(0xFFE0E0E0),
                         valueColor:
                             const AlwaysStoppedAnimation(Color(0xFF378ADD)),
                         minHeight: 6,
@@ -615,6 +621,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -640,11 +647,11 @@ class _ThemeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = const Color(0xFF378ADD);
+    final activeColor = const Color(0xFF1A73E8);
     final disabledBg =
-        isDark ? const Color(0xFF1D232A) : const Color(0xFFF5F5F5);
+        isDark ? const Color(0xFF121212) : const Color(0xFFEEEEEE);
     final disabledText =
-        isDark ? const Color(0xFF3A4250) : const Color(0xFFCBD5E1);
+        isDark ? const Color(0xFF484848) : const Color(0xFFBDBDBD);
 
     return Expanded(
       child: GestureDetector(
@@ -673,8 +680,8 @@ class _ThemeButton extends StatelessWidget {
                       ? activeColor
                       : enabled
                           ? (isDark
-                              ? const Color(0xFF747E8B)
-                              : const Color(0xFF94A3B8))
+                              ? const Color(0xFF9E9E9E)
+                              : const Color(0xFF6E6E6E))
                           : disabledText),
               const SizedBox(width: 6),
               Text(label,
@@ -686,8 +693,8 @@ class _ThemeButton extends StatelessWidget {
                         ? activeColor
                         : enabled
                             ? (isDark
-                                ? const Color(0xFF747E8B)
-                                : const Color(0xFF94A3B8))
+                                ? const Color(0xFF9E9E9E)
+                                : const Color(0xFF6E6E6E))
                             : disabledText,
                   )),
             ],
@@ -739,10 +746,10 @@ class _NavRow extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: const Color(0xFF378ADD).withOpacity(0.1),
+                color: const Color(0xFF1A73E8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(icon, size: 18, color: const Color(0xFF378ADD)),
+              child: Icon(icon, size: 18, color: const Color(0xFF1A73E8)),
             ),
             const SizedBox(width: 12),
             Expanded(

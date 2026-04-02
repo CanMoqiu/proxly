@@ -1,21 +1,11 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-enum _UpdateState {
-  idle,
-  checking,
-  upToDate,
-  available,
-  downloading,
-  installing,
-  failed,
-}
+enum _UpdateState { idle, checking, upToDate, available, failed }
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -25,24 +15,29 @@ class AboutPage extends StatefulWidget {
 }
 
 class _AboutPageState extends State<AboutPage> {
-  static const _version = '26.2.3';
   static const _appName = 'Proxly';
   static const _description =
       'Proxly 是一款专为 OpenClash / Mihomo 设计的 Android 监控面板，'
       '让你在手机上实时掌握代理状态、流量用量与连接详情，无需打开浏览器。';
   static const _githubRepo = 'CanMoqiu/proxly';
 
+  String _version = '';
   _UpdateState _updateState = _UpdateState.idle;
-  double _downloadProgress = 0;
   String? _latestTag;
-  String? _apkUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) setState(() => _version = info.version);
+  }
 
   Future<void> _checkUpdate() async {
-    if (_updateState == _UpdateState.checking ||
-        _updateState == _UpdateState.downloading ||
-        _updateState == _UpdateState.installing) {
-      return;
-    }
+    if (_updateState == _UpdateState.checking) return;
     setState(() => _updateState = _UpdateState.checking);
     try {
       final res = await http
@@ -55,75 +50,63 @@ class _AboutPageState extends State<AboutPage> {
       if (!mounted) return;
       final json = jsonDecode(res.body) as Map<String, dynamic>;
       final tag = json['tag_name'] as String? ?? '';
-      final currentTag = 'v$_version';
+      final currentTag = _version.isNotEmpty ? 'v$_version' : '';
       if (tag.isEmpty || tag == currentTag) {
         setState(() => _updateState = _UpdateState.upToDate);
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) setState(() => _updateState = _UpdateState.idle);
         });
       } else {
-        final assets =
-            (json['assets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-        final apkAsset = assets.firstWhere(
-          (a) => (a['name'] as String? ?? '').endsWith('.apk'),
-          orElse: () => <String, dynamic>{},
-        );
         setState(() {
           _latestTag = tag;
-          _apkUrl = apkAsset['browser_download_url'] as String?;
           _updateState = _UpdateState.available;
         });
+        _promptGoToGitHub(tag);
       }
     } catch (_) {
       if (mounted) setState(() => _updateState = _UpdateState.failed);
     }
   }
 
-  Future<void> _downloadAndInstall() async {
-    final url = _apkUrl;
-    if (url == null) return;
-    setState(() {
-      _updateState = _UpdateState.downloading;
-      _downloadProgress = 0;
-    });
-    try {
-      final client = http.Client();
-      final request = http.Request('GET', Uri.parse(url));
-      final response = await client.send(request);
-      final total = response.contentLength ?? -1;
-      int received = 0;
-      final bytes = <int>[];
-      await for (final chunk in response.stream) {
-        bytes.addAll(chunk);
-        received += chunk.length;
-        if (total > 0 && mounted) {
-          setState(() => _downloadProgress = received / total);
-        }
-      }
-      client.close();
-      if (!mounted) return;
-      // 用外部存储，让系统安装器更易通过 FileProvider 访问
-      final dir = await getExternalStorageDirectory() ?? await getTemporaryDirectory();
-      final file = File('${dir.path}/proxly-update.apk');
-      await file.writeAsBytes(bytes);
-      if (!mounted) return;
-      setState(() => _updateState = _UpdateState.installing);
-      try {
-        final result = await OpenFile.open(
-          file.path,
-          type: 'application/vnd.android.package-archive',
+  Future<void> _promptGoToGitHub(String tag) async {
+    if (!mounted) return;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+        final textColor =
+            isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+        final hintColor =
+            isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
+        return AlertDialog(
+          backgroundColor: bgColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Text('发现新版本 $tag',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: textColor)),
+          content: Text('前往 GitHub Releases 页面下载？',
+              style: TextStyle(fontSize: 13, color: hintColor)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child:
+                  Text('取消', style: TextStyle(fontSize: 13, color: hintColor)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('前往',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF378ADD))),
+            ),
+          ],
         );
-        if (mounted && result.type != ResultType.done) {
-          debugPrint('OpenFile result: ${result.type} ${result.message}');
-          setState(() => _updateState = _UpdateState.failed);
-        }
-      } catch (e) {
-        debugPrint('OpenFile exception: $e');
-        if (mounted) setState(() => _updateState = _UpdateState.failed);
-      }
-    } catch (e) {
-      debugPrint('Download exception: $e');
-      if (mounted) setState(() => _updateState = _UpdateState.failed);
+      },
+    );
+    if (go == true) {
+      _openUrl('https://github.com/$_githubRepo/releases/tag/$_latestTag');
     }
   }
 
@@ -132,6 +115,29 @@ class _AboutPageState extends State<AboutPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  Future<void> _confirmOpenUrl(String url, String title) async {
+    if (!mounted) return;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: const Text('即将在外部浏览器中打开，确定继续？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('确定',
+                style: TextStyle(color: Color(0xFF378ADD))),
+          ),
+        ],
+      ),
+    );
+    if (go == true) _openUrl(url);
   }
 
   Widget _buildUpdateButton(Color hintColor) {
@@ -196,72 +202,20 @@ class _AboutPageState extends State<AboutPage> {
         return pill(
           borderColor: blue,
           fillColor: blue,
-          onTap: _downloadAndInstall,
+          onTap: () => _promptGoToGitHub(_latestTag ?? ''),
           child: row([
-            const Icon(Icons.download_rounded, size: 14, color: Colors.white),
+            const Icon(Icons.open_in_new_rounded,
+                size: 14, color: Colors.white),
             const SizedBox(width: 4),
             Text('新版本 $_latestTag',
                 style: const TextStyle(fontSize: 13, color: Colors.white)),
-          ]),
-        );
-      case _UpdateState.downloading:
-        return Column(
-          children: [
-            pill(
-              borderColor: blue,
-              child: row([
-                SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: blue,
-                    value: _downloadProgress > 0 ? _downloadProgress : null,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _downloadProgress > 0
-                      ? '${(_downloadProgress * 100).toInt()}%'
-                      : '连接中…',
-                  style: const TextStyle(fontSize: 13, color: blue),
-                ),
-              ]),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: 160,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _downloadProgress > 0 ? _downloadProgress : null,
-                  backgroundColor: blue.withValues(alpha: 0.15),
-                  color: blue,
-                  minHeight: 3,
-                ),
-              ),
-            ),
-          ],
-        );
-      case _UpdateState.installing:
-        return pill(
-          borderColor: hintColor,
-          child: row([
-            SizedBox(
-              width: 12,
-              height: 12,
-              child:
-                  CircularProgressIndicator(strokeWidth: 1.5, color: hintColor),
-            ),
-            const SizedBox(width: 6),
-            Text('准备安装…', style: TextStyle(fontSize: 13, color: hintColor)),
           ]),
         );
       case _UpdateState.failed:
         return pill(
           borderColor: red,
           onTap: _checkUpdate,
-          child: const Text('更新失败，请重试',
+          child: const Text('检查失败，重试',
               style: TextStyle(fontSize: 13, color: red)),
         );
     }
@@ -270,16 +224,16 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1D232A) : const Color(0xFFFAFAFA);
-    final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final cardBorder =
-        isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final textColor =
-        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+        isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
     final hintColor =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
     final dividerColor =
-        isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -311,10 +265,10 @@ class _AboutPageState extends State<AboutPage> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF378ADD).withValues(alpha: 0.12),
+                    color: const Color(0xFF1A73E8).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: const Color(0xFF378ADD).withValues(alpha: 0.25),
+                        color: const Color(0xFF1A73E8).withValues(alpha: 0.25),
                         width: 0.8),
                   ),
                   child: const Icon(Icons.hub_rounded,
@@ -329,14 +283,17 @@ class _AboutPageState extends State<AboutPage> {
                 const SizedBox(height: 4),
                 GestureDetector(
                   onLongPress: () {
-                    Clipboard.setData(const ClipboardData(text: _version));
+                    if (_version.isEmpty) return;
+                    Clipboard.setData(ClipboardData(text: _version));
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('版本号已复制'),
                       duration: Duration(seconds: 1),
                     ));
                   },
-                  child: Text('版本 $_version',
-                      style: TextStyle(fontSize: 13, color: hintColor)),
+                  child: Text(
+                    _version.isNotEmpty ? '版本 $_version' : '读取中…',
+                    style: TextStyle(fontSize: 13, color: hintColor),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _buildUpdateButton(hintColor),
@@ -346,7 +303,8 @@ class _AboutPageState extends State<AboutPage> {
                   child: Text(
                     _description,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: hintColor, height: 1.6),
+                    style:
+                        TextStyle(fontSize: 13, color: hintColor, height: 1.6),
                   ),
                 ),
               ],
@@ -374,8 +332,8 @@ class _AboutPageState extends State<AboutPage> {
                     textColor: textColor,
                     hintColor: hintColor,
                     dividerColor: dividerColor,
-                    onTap: () =>
-                        _openUrl('https://github.com/$_githubRepo#readme'),
+                    onTap: () => _confirmOpenUrl(
+                        'https://github.com/$_githubRepo#readme', '功能介绍'),
                     isLast: false,
                   ),
                   _LinkRow(
@@ -385,8 +343,8 @@ class _AboutPageState extends State<AboutPage> {
                     textColor: textColor,
                     hintColor: hintColor,
                     dividerColor: dividerColor,
-                    onTap: () => _openUrl(
-                        'https://github.com/$_githubRepo/releases'),
+                    onTap: () => _confirmOpenUrl(
+                        'https://github.com/$_githubRepo/releases', '更新日志'),
                     isLast: true,
                   ),
                 ],
@@ -419,7 +377,8 @@ class _AboutPageState extends State<AboutPage> {
                   '本软件以 MIT 协议开源，允许任何人免费使用、复制、修改、合并、'
                   '发布、分发、再授权及销售本软件的副本，但须保留上述版权声明与本许可声明。\n\n'
                   '本软件按"原样"提供，不附带任何明示或暗示的担保。',
-                  style: TextStyle(fontSize: 12, color: hintColor, height: 1.65),
+                  style:
+                      TextStyle(fontSize: 12, color: hintColor, height: 1.65),
                 ),
               ],
             ),
@@ -443,6 +402,8 @@ class _AboutPageState extends State<AboutPage> {
                 _DepRow('archive', 'BSD-3-Clause'),
                 _DepRow('path_provider', 'BSD-3-Clause'),
                 _DepRow('shared_preferences', 'BSD-3-Clause'),
+                _DepRow('flutter_secure_storage', 'BSD-3-Clause'),
+                _DepRow('package_info_plus', 'BSD-3-Clause'),
                 _DepRow('flutter_svg', 'MIT'),
                 _DepRow('http', 'BSD-3-Clause'),
                 _DepRow('open_file', 'MIT'),
@@ -517,10 +478,10 @@ class _LinkRow extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF378ADD).withValues(alpha: 0.1),
+                    color: const Color(0xFF1A73E8).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(icon, size: 17, color: const Color(0xFF378ADD)),
+                  child: Icon(icon, size: 17, color: const Color(0xFF1A73E8)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -565,11 +526,11 @@ class _DepRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor =
-        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+        isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
     final hintColor =
-        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+        isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
     final dividerColor =
-        isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Column(
       children: [

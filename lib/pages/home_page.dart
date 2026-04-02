@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/clash_service.dart';
 import '../services/ssh_service.dart';
 import '../services/web_panel_service.dart';
@@ -83,7 +84,8 @@ class _HomePageState extends State<HomePage> {
 
     final prefs = await SharedPreferences.getInstance();
     final host = prefs.getString('clash_host') ?? '';
-    final token = prefs.getString('clash_token') ?? '';
+    const _secureStorage = FlutterSecureStorage();
+    final token = await _secureStorage.read(key: 'clash_token') ?? '';
     if (host.isEmpty) {
       _showSnack('请先在设置页填写 Clash 地址', success: false);
       return;
@@ -331,10 +333,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
-    final textPrimary = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final textSecondary = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final textPrimary = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final textSecondary = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF378ADD)));
@@ -360,7 +362,7 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF378ADD),
+                  color: const Color(0xFF1A73E8),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text('重试', style: TextStyle(color: Colors.white, fontSize: 14)),
@@ -378,7 +380,7 @@ class _HomePageState extends State<HomePage> {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _handleRefresh,
-        color: const Color(0xFF378ADD),
+        color: const Color(0xFF1A73E8),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -394,21 +396,21 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                        color: const Color(0xFF6D28D9).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: const Color(0xFF7C3AED)
-                                .withValues(alpha: 0.3),
+                            color: const Color(0xFF6D28D9)
+                                .withValues(alpha: 0.35),
                             width: 0.5),
                       ),
                       child: const Row(
                         children: [
                           Icon(Icons.refresh_rounded,
-                              color: Color(0xFFA78BFA), size: 16),
+                              color: Color(0xFF9C6FE4), size: 16),
                           SizedBox(width: 6),
                           Text('重启 Clash',
                               style: TextStyle(
-                                  color: Color(0xFFA78BFA),
+                                  color: Color(0xFF9C6FE4),
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500)),
                         ],
@@ -461,10 +463,10 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                    color: const Color(0xFF6D28D9).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.25),
+                        color: const Color(0xFF6D28D9).withValues(alpha: 0.25),
                         width: 0.5),
                   ),
                   child: Row(
@@ -473,12 +475,12 @@ class _HomePageState extends State<HomePage> {
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Color(0xFFA78BFA)),
+                            strokeWidth: 2, color: Color(0xFF9C6FE4)),
                       ),
                       const SizedBox(width: 10),
                       Text(_restartStatus,
                           style: const TextStyle(
-                              fontSize: 13, color: Color(0xFFA78BFA))),
+                              fontSize: 13, color: Color(0xFF9C6FE4))),
                     ],
                   ),
                 ),
@@ -553,8 +555,8 @@ class _HomePageState extends State<HomePage> {
                                       child: LinearProgressIndicator(
                                         value: p.percentage,
                                         backgroundColor: isDark
-                                            ? const Color(0xFF0F172A)
-                                            : const Color(0xFFF1F5F9),
+                                            ? const Color(0xFF282828)
+                                            : const Color(0xFFEEEEEE),
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(barColor),
                                         minHeight: 4,
@@ -569,8 +571,8 @@ class _HomePageState extends State<HomePage> {
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 child: Divider(
                                   color: isDark
-                                      ? const Color(0xFF334155)
-                                      : const Color(0xFFE2E8F0),
+                                      ? const Color(0xFF2C2C2C)
+                                      : const Color(0xFFE0E0E0),
                                   height: 1,
                                   thickness: 0.5,
                                 ),
@@ -605,7 +607,7 @@ class _HomePageState extends State<HomePage> {
                             label: '活跃连接',
                             value: '$_activeConnections',
                             cardBg:
-                                isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5),
+                                isDark ? const Color(0xFF282828) : const Color(0xFFEEEEEE),
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
                           ),
@@ -615,9 +617,9 @@ class _HomePageState extends State<HomePage> {
                           child: _StatCard(
                             label: '累计下载',
                             value: _formatBytes(_totalDownload),
-                            valueColor: const Color(0xFF378ADD),
+                            valueColor: const Color(0xFF1A73E8),
                             cardBg:
-                                isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5),
+                                isDark ? const Color(0xFF282828) : const Color(0xFFEEEEEE),
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
                           ),
@@ -629,7 +631,7 @@ class _HomePageState extends State<HomePage> {
                             value: _formatBytes(_totalUpload),
                             valueColor: const Color(0xFF1D9E75),
                             cardBg:
-                                isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F5),
+                                isDark ? const Color(0xFF282828) : const Color(0xFFEEEEEE),
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
                           ),
@@ -700,7 +702,7 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _SpeedLegend(
-                            color: const Color(0xFF378ADD),
+                            color: const Color(0xFF1A73E8),
                             label: '↓ ${_formatSpeed(_currentDownSpeed)}'),
                         const SizedBox(width: 24),
                         _SpeedLegend(
@@ -739,7 +741,7 @@ class _HomePageState extends State<HomePage> {
                               builder: (_) => StatefulBuilder(
                                 builder: (ctx, setDialogState) {
                                   final bg = isDark
-                                      ? const Color(0xFF191E24)
+                                      ? const Color(0xFF1E1E1E)
                                       : Colors.white;
                                   return AlertDialog(
                                     backgroundColor: bg,
@@ -768,7 +770,7 @@ class _HomePageState extends State<HomePage> {
                                         await prefs.setBool('chain_full_display', v);
                                       },
                                       activeColor:
-                                          const Color(0xFF378ADD),
+                                          const Color(0xFF1A73E8),
                                       contentPadding: EdgeInsets.zero,
                                     ),
                                     actions: [
@@ -811,7 +813,7 @@ class _HomePageState extends State<HomePage> {
                                         ? Icons.keyboard_arrow_up
                                         : Icons.keyboard_arrow_down,
                                     size: 16,
-                                    color: const Color(0xFF378ADD),
+                                    color: const Color(0xFF1A73E8),
                                   ),
                                 ],
                               ),
@@ -829,7 +831,7 @@ class _HomePageState extends State<HomePage> {
                               onSelected: (v) =>
                                   setState(() => _connSortBy = v),
                               color: isDark
-                                  ? const Color(0xFF191E24)
+                                  ? const Color(0xFF1E1E1E)
                                   : Colors.white,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10)),
@@ -846,8 +848,8 @@ class _HomePageState extends State<HomePage> {
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isDark
-                                      ? const Color(0xFF0F172A)
-                                      : const Color(0xFFF1F5F9),
+                                      ? const Color(0xFF282828)
+                                      : const Color(0xFFEEEEEE),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
@@ -882,7 +884,7 @@ class _HomePageState extends State<HomePage> {
                                 onSelected: (v) =>
                                     setState(() => _filterIp = v),
                                 color: isDark
-                                    ? const Color(0xFF191E24)
+                                    ? const Color(0xFF1E1E1E)
                                     : Colors.white,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10)),
@@ -905,15 +907,15 @@ class _HomePageState extends State<HomePage> {
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: active
-                                        ? const Color(0xFF378ADD)
+                                        ? const Color(0xFF1A73E8)
                                             .withValues(alpha: 0.12)
                                         : isDark
-                                            ? const Color(0xFF0F172A)
-                                            : const Color(0xFFF1F5F9),
+                                            ? const Color(0xFF282828)
+                                            : const Color(0xFFEEEEEE),
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
                                       color: active
-                                          ? const Color(0xFF378ADD)
+                                          ? const Color(0xFF1A73E8)
                                           : Colors.transparent,
                                       width: 0.5,
                                     ),
@@ -925,12 +927,12 @@ class _HomePageState extends State<HomePage> {
                                           style: TextStyle(
                                               fontSize: 11,
                                               color: active
-                                                  ? const Color(0xFF378ADD)
+                                                  ? const Color(0xFF1A73E8)
                                                   : textSecondary)),
                                       Icon(Icons.arrow_drop_down,
                                           size: 14,
                                           color: active
-                                              ? const Color(0xFF378ADD)
+                                              ? const Color(0xFF1A73E8)
                                               : textSecondary),
                                     ],
                                   ),
@@ -956,7 +958,7 @@ class _HomePageState extends State<HomePage> {
                                       chainLower.contains('直连') ||
                                       chainLower.contains('本地'))
                                   ? const Color(0xFF1D9E75)
-                                  : const Color(0xFF378ADD);
+                                  : const Color(0xFF1A73E8);
                           final upSpeed = _connUpSpeed[c.id] ?? 0;
                           final downSpeed = _connDownSpeed[c.id] ?? 0;
                           widgets.add(GestureDetector(
@@ -1054,8 +1056,8 @@ class _HomePageState extends State<HomePage> {
                               height: 1,
                               thickness: 0.5,
                               color: isDark
-                                  ? const Color(0xFF334155)
-                                  : const Color(0xFFE2E8F0),
+                                  ? const Color(0xFF2C2C2C)
+                                  : const Color(0xFFE0E0E0),
                             ));
                         }
                         return widgets;
@@ -1153,7 +1155,7 @@ class _SpeedChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)
+      ..color = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0)
       ..strokeWidth = 0.5;
 
     for (int i = 0; i <= 4; i++) {
@@ -1184,7 +1186,7 @@ class _SpeedChartPainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    drawLine(downloadSpeeds, const Color(0xFF378ADD));
+    drawLine(downloadSpeeds, const Color(0xFF1A73E8));
     drawLine(uploadSpeeds, const Color(0xFF1D9E75));
   }
 
@@ -1219,8 +1221,8 @@ class _SshDialogState extends State<_SshDialog> {
   }
 
   Future<void> _loadSaved() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString('ssh_password') ?? '';
+    const storage = FlutterSecureStorage();
+    final saved = await storage.read(key: 'ssh_password') ?? '';
     if (mounted) _ctrl.text = saved;
   }
 
@@ -1234,19 +1236,19 @@ class _SshDialogState extends State<_SshDialog> {
     final password = _ctrl.text;
     if (password.isEmpty) return;
     setState(() => _connecting = true);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('ssh_password', password);
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'ssh_password', value: password);
     if (mounted) Navigator.of(context).pop(password);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF191E24) : Colors.white;
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
-    final inputBg = isDark ? const Color(0xFF1D232A) : const Color(0xFFF5F5F5);
-    final borderColor = isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+    final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? const Color(0xFFE1E1E1) : const Color(0xFF1C1B1F);
+    final hintColor = isDark ? const Color(0xFF9E9E9E) : const Color(0xFF6E6E6E);
+    final inputBg = isDark ? const Color(0xFF121212) : const Color(0xFFEEEEEE);
+    final borderColor = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Dialog(
       backgroundColor: bgColor,
@@ -1327,7 +1329,7 @@ class _SshDialogState extends State<_SshDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF378ADD),
+                          color: const Color(0xFF1A73E8),
                           borderRadius: BorderRadius.circular(12)),
                       child: Center(
                         child: _connecting

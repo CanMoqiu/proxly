@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 class ClashConfig {
@@ -90,9 +91,10 @@ class ClashService {
   ClashConfig? _config;
 
   Future<void> loadConfig() async {
+    const storage = FlutterSecureStorage();
     final prefs = await SharedPreferences.getInstance();
     final host = prefs.getString('clash_host') ?? '';
-    final token = prefs.getString('clash_token') ?? '';
+    final token = await storage.read(key: 'clash_token') ?? '';
     _config = host.isNotEmpty ? ClashConfig(host: host, token: token) : null;
   }
 
