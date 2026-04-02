@@ -25,7 +25,7 @@ class AboutPage extends StatefulWidget {
 }
 
 class _AboutPageState extends State<AboutPage> {
-  static const _version = '26.2.2';
+  static const _version = '26.2.3';
   static const _appName = 'Proxly';
   static const _description =
       'Proxly 是一款专为 OpenClash / Mihomo 设计的 Android 监控面板，'
