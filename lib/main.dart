@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/clash_service.dart';
-import 'pages/main_shell.dart';
+import 'pages/main_shell.dart' show MainShell, shellRouteObserver;
 import 'pages/setup_wizard_page.dart';
 
 void main() async {
@@ -18,12 +18,19 @@ class ProxlyApp extends StatefulWidget {
   final bool showSetupWizard;
   const ProxlyApp({super.key, this.showSetupWizard = false});
 
+  // 静态变量，供子页面同步读取，无需本地副本
+  static ThemeMode activeThemeMode = ThemeMode.system;
+
   static void toggleThemeOf(BuildContext context) {
     context.findAncestorStateOfType<_ProxlyAppState>()?.toggleTheme();
   }
 
   static void setBallVisibilityOf(BuildContext context, bool value) {
     context.findAncestorStateOfType<_ProxlyAppState>()?.setBallVisibility(value);
+  }
+
+  static void setThemeModeOf(BuildContext context, ThemeMode mode) {
+    context.findAncestorStateOfType<_ProxlyAppState>()?.setThemeMode(mode);
   }
 
   @override
@@ -37,12 +44,23 @@ class _ProxlyAppState extends State<ProxlyApp> {
   @override
   void initState() {
     super.initState();
-    _loadBallPref();
+    _loadPrefs();
   }
 
-  Future<void> _loadBallPref() async {
+  Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => _showBall = prefs.getBool('show_floating_ball') ?? false);
+    if (!mounted) return;
+    final modeStr = prefs.getString('theme_mode') ?? 'system';
+    final mode = modeStr == 'light'
+        ? ThemeMode.light
+        : modeStr == 'dark'
+            ? ThemeMode.dark
+            : ThemeMode.system;
+    ProxlyApp.activeThemeMode = mode;
+    setState(() {
+      _showBall = prefs.getBool('show_floating_ball') ?? false;
+      _themeMode = mode;
+    });
   }
 
   void toggleTheme() {
@@ -50,9 +68,14 @@ class _ProxlyAppState extends State<ProxlyApp> {
         (_themeMode == ThemeMode.system &&
             WidgetsBinding.instance.platformDispatcher.platformBrightness ==
                 Brightness.dark);
-    setState(() {
-      _themeMode = currentIsDark ? ThemeMode.light : ThemeMode.dark;
-    });
+    final next = currentIsDark ? ThemeMode.light : ThemeMode.dark;
+    ProxlyApp.activeThemeMode = next;
+    setState(() => _themeMode = next);
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    ProxlyApp.activeThemeMode = mode;
+    setState(() => _themeMode = mode);
   }
 
   void setBallVisibility(bool value) => setState(() => _showBall = value);
@@ -62,7 +85,9 @@ class _ProxlyAppState extends State<ProxlyApp> {
     return MaterialApp(
       title: 'Proxly',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [shellRouteObserver],
       themeMode: _themeMode,
+      themeAnimationDuration: Duration.zero,
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFFAFAFA),

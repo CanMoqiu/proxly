@@ -12,7 +12,6 @@ class LogsPage extends StatefulWidget {
 class _LogsPageState extends State<LogsPage> {
   String _host = '';
   String _token = '';
-  bool _ready = false;
 
   @override
   void initState() {
@@ -26,7 +25,6 @@ class _LogsPageState extends State<LogsPage> {
       setState(() {
         _host = prefs.getString('clash_host') ?? '';
         _token = prefs.getString('clash_token') ?? '';
-        _ready = true;
       });
     }
   }
@@ -36,11 +34,6 @@ class _LogsPageState extends State<LogsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-
-    if (!_ready) {
-      return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF378ADD)));
-    }
 
     return SafeArea(
       child: Column(

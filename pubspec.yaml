@@ -2,7 +2,7 @@ name: proxly
 description: "Clash proxy monitor and control panel."
 publish_to: 'none'
 
-version: 26.2.2+21
+version: 26.2.3+22
 
 environment:
   sdk: ^3.6.2
@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
+  open_file: ^3.3.2
+  url_launcher: ^6.3.0
   shared_preferences: ^2.2.3
   flutter_inappwebview: ^6.0.0
   dartssh2: ^2.9.0

@@ -1,106 +1,271 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class AboutPage extends StatelessWidget {
+enum _UpdateState {
+  idle,
+  checking,
+  upToDate,
+  available,
+  downloading,
+  installing,
+  failed,
+}
+
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
   static const _version = '26.2.2';
   static const _appName = 'Proxly';
-  static const _description = 'Proxly 是一款专为 OpenClash / Mihomo 设计的 Android 监控面板，'
+  static const _description =
+      'Proxly 是一款专为 OpenClash / Mihomo 设计的 Android 监控面板，'
       '让你在手机上实时掌握代理状态、流量用量与连接详情，无需打开浏览器。';
+  static const _githubRepo = 'CanMoqiu/proxly';
 
-  static const _changelog = [
-    _ChangelogItem(
-      version: '26.2.2',
-      date: '2026-04-01',
-      items: [
-        '代理页左上角新增规则视图入口，点击可在代理与规则之间切换',
-      ],
-    ),
-    _ChangelogItem(
-      version: '26.2.1',
-      date: '2026-03-31',
-      items: [
-        '内置 Zashboard 更新至 v3.0.0',
-        '代理页支持从 JSON 文件导入 Zashboard 配置',
-        '修复首次安装控制台无限加载（屏蔽 Service Worker 在隐藏 WebView 中的注册）',
-        '修复 Zashboard 用户配置重启后丢失',
-        '修复 WebView 渲染掉帧',
-        '修复开发者模式下流量编辑长按无响应',
-        '开发者功能首次安装默认关闭',
-      ],
-    ),
-    _ChangelogItem(
-      version: '26.2',
-      date: '2026-03-30',
-      items: [
-        '新设备首次启动显示设置向导，引导完成连接配置',
-        '代理页迁移到底部导航栏，随时可访问',
-        '支持在线下载并更新 Zashboard 控制台面板',
-        '更新后自动保留 Zashboard 用户配置',
-        '出站链路：连接详情弹窗，展示完整元数据',
-        '出站链路：精简/完整链路切换（持久化）',
-        '出站链路：实时时间刷新、按分钟显示',
-        '关于页面',
-      ],
-    ),
-    _ChangelogItem(
-      version: '26.1',
-      date: '2026-03-30',
-      items: [
-        '出站链路卡片：实时连接列表，支持排序与 IP 筛选',
-        '每条连接显示代理链、规则、实时速度与累计流量',
-        '长按提供商流量条可临时修改数值（开发者模式）',
-        '控制台内置 Zashboard，支持深浅色主题同步',
-        '悬浮主题切换球',
-        '一键重启 Clash（SSH）',
-        '修复 Jetifier / Manifest merger 编译问题',
-      ],
-    ),
-  ];
+  _UpdateState _updateState = _UpdateState.idle;
+  double _downloadProgress = 0;
+  String? _latestTag;
+  String? _apkUrl;
 
-  static const _features = [
-    _Feature(
-      icon: Icons.bar_chart_rounded,
-      title: '实时流量监控',
-      desc: '速度图表、累计上传/下载，每秒刷新',
-    ),
-    _Feature(
-      icon: Icons.hub_outlined,
-      title: '代理控制台',
-      desc: '内置 Zashboard，支持在线更新面板版本',
-    ),
-    _Feature(
-      icon: Icons.lan_outlined,
-      title: '出站链路',
-      desc: '实时连接列表，可查看完整代理链与元数据',
-    ),
-    _Feature(
-      icon: Icons.data_usage_rounded,
-      title: '订阅流量',
-      desc: '展示各订阅剩余用量与到期时间',
-    ),
-    _Feature(
-      icon: Icons.refresh_rounded,
-      title: '一键重启',
-      desc: '通过 SSH 远程重启 OpenClash 内核',
-    ),
-    _Feature(
-      icon: Icons.article_outlined,
-      title: '内核日志',
-      desc: 'WebSocket 实时日志，支持级别筛选',
-    ),
-  ];
+  Future<void> _checkUpdate() async {
+    if (_updateState == _UpdateState.checking ||
+        _updateState == _UpdateState.downloading ||
+        _updateState == _UpdateState.installing) {
+      return;
+    }
+    setState(() => _updateState = _UpdateState.checking);
+    try {
+      final res = await http
+          .get(
+            Uri.parse(
+                'https://api.github.com/repos/$_githubRepo/releases/latest'),
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      final json = jsonDecode(res.body) as Map<String, dynamic>;
+      final tag = json['tag_name'] as String? ?? '';
+      final currentTag = 'v$_version';
+      if (tag.isEmpty || tag == currentTag) {
+        setState(() => _updateState = _UpdateState.upToDate);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _updateState = _UpdateState.idle);
+        });
+      } else {
+        final assets =
+            (json['assets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final apkAsset = assets.firstWhere(
+          (a) => (a['name'] as String? ?? '').endsWith('.apk'),
+          orElse: () => <String, dynamic>{},
+        );
+        setState(() {
+          _latestTag = tag;
+          _apkUrl = apkAsset['browser_download_url'] as String?;
+          _updateState = _UpdateState.available;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _updateState = _UpdateState.failed);
+    }
+  }
+
+  Future<void> _downloadAndInstall() async {
+    final url = _apkUrl;
+    if (url == null) return;
+    setState(() {
+      _updateState = _UpdateState.downloading;
+      _downloadProgress = 0;
+    });
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await client.send(request);
+      final total = response.contentLength ?? -1;
+      int received = 0;
+      final bytes = <int>[];
+      await for (final chunk in response.stream) {
+        bytes.addAll(chunk);
+        received += chunk.length;
+        if (total > 0 && mounted) {
+          setState(() => _downloadProgress = received / total);
+        }
+      }
+      client.close();
+      if (!mounted) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/proxly-update.apk');
+      await file.writeAsBytes(bytes);
+      if (!mounted) return;
+      setState(() => _updateState = _UpdateState.installing);
+      await OpenFile.open(file.path);
+    } catch (_) {
+      if (mounted) setState(() => _updateState = _UpdateState.failed);
+    }
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Widget _buildUpdateButton(Color hintColor) {
+    const blue = Color(0xFF378ADD);
+    const red = Color(0xFFE24B4A);
+
+    Widget pill({
+      required Color borderColor,
+      Color? fillColor,
+      required Widget child,
+      VoidCallback? onTap,
+    }) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: child,
+        ),
+      );
+    }
+
+    Widget row(List<Widget> children) =>
+        Row(mainAxisSize: MainAxisSize.min, children: children);
+
+    switch (_updateState) {
+      case _UpdateState.idle:
+        return pill(
+          borderColor: blue,
+          onTap: _checkUpdate,
+          child: const Text('检查更新',
+              style: TextStyle(fontSize: 13, color: blue)),
+        );
+      case _UpdateState.checking:
+        return pill(
+          borderColor: hintColor,
+          child: row([
+            SizedBox(
+              width: 12,
+              height: 12,
+              child:
+                  CircularProgressIndicator(strokeWidth: 1.5, color: hintColor),
+            ),
+            const SizedBox(width: 6),
+            Text('检查中…', style: TextStyle(fontSize: 13, color: hintColor)),
+          ]),
+        );
+      case _UpdateState.upToDate:
+        return pill(
+          borderColor: hintColor,
+          child: row([
+            Icon(Icons.check_rounded, size: 14, color: hintColor),
+            const SizedBox(width: 4),
+            Text('无更新', style: TextStyle(fontSize: 13, color: hintColor)),
+          ]),
+        );
+      case _UpdateState.available:
+        return pill(
+          borderColor: blue,
+          fillColor: blue,
+          onTap: _downloadAndInstall,
+          child: row([
+            const Icon(Icons.download_rounded, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text('下载中 $_latestTag',
+                style: const TextStyle(fontSize: 13, color: Colors.white)),
+          ]),
+        );
+      case _UpdateState.downloading:
+        return Column(
+          children: [
+            pill(
+              borderColor: blue,
+              child: row([
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: blue,
+                    value: _downloadProgress > 0 ? _downloadProgress : null,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _downloadProgress > 0
+                      ? '${(_downloadProgress * 100).toInt()}%'
+                      : '连接中…',
+                  style: const TextStyle(fontSize: 13, color: blue),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 160,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _downloadProgress > 0 ? _downloadProgress : null,
+                  backgroundColor: blue.withValues(alpha: 0.15),
+                  color: blue,
+                  minHeight: 3,
+                ),
+              ),
+            ),
+          ],
+        );
+      case _UpdateState.installing:
+        return pill(
+          borderColor: hintColor,
+          child: row([
+            SizedBox(
+              width: 12,
+              height: 12,
+              child:
+                  CircularProgressIndicator(strokeWidth: 1.5, color: hintColor),
+            ),
+            const SizedBox(width: 6),
+            Text('准备安装…', style: TextStyle(fontSize: 13, color: hintColor)),
+          ]),
+        );
+      case _UpdateState.failed:
+        return pill(
+          borderColor: red,
+          onTap: _checkUpdate,
+          child: const Text('检查失败，请重试',
+              style: TextStyle(fontSize: 13, color: red)),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1D232A) : const Color(0xFFFAFAFA);
     final cardBg = isDark ? const Color(0xFF191E24) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
-    final textColor = isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
-    final hintColor = isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
-    final dividerColor = isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
+    final cardBorder =
+        isDark ? const Color(0xFF15191E) : const Color(0xFFE2E8F0);
+    final textColor =
+        isDark ? const Color(0xFFA6ADBB) : const Color(0xFF0F172A);
+    final hintColor =
+        isDark ? const Color(0xFF747E8B) : const Color(0xFF94A3B8);
+    final dividerColor =
+        isDark ? const Color(0xFF2A3140) : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -114,9 +279,7 @@ class AboutPage extends StatelessWidget {
         ),
         title: Text('关于',
             style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: textColor)),
+                fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
@@ -134,10 +297,10 @@ class AboutPage extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF378ADD).withOpacity(0.12),
+                    color: const Color(0xFF378ADD).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: const Color(0xFF378ADD).withOpacity(0.25),
+                        color: const Color(0xFF378ADD).withValues(alpha: 0.25),
                         width: 0.8),
                   ),
                   child: const Icon(Icons.hub_rounded,
@@ -159,19 +322,17 @@ class AboutPage extends StatelessWidget {
                     ));
                   },
                   child: Text('版本 $_version',
-                      style:
-                          TextStyle(fontSize: 13, color: hintColor)),
+                      style: TextStyle(fontSize: 13, color: hintColor)),
                 ),
                 const SizedBox(height: 12),
+                _buildUpdateButton(hintColor),
+                const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
                     _description,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: hintColor,
-                        height: 1.6),
+                    style: TextStyle(fontSize: 13, color: hintColor, height: 1.6),
                   ),
                 ),
               ],
@@ -179,140 +340,46 @@ class AboutPage extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // ── 功能介绍 ──
-          _SectionTitle('功能介绍', textColor),
+          // ── 链接 ──
+          _SectionTitle('链接', textColor),
           const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorder, width: 0.5),
-            ),
-            child: Column(
-              children: List.generate(_features.length, (i) {
-                final f = _features[i];
-                final isLast = i == _features.length - 1;
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF378ADD).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(f.icon,
-                                size: 18, color: const Color(0xFF378ADD)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(f.title,
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: textColor)),
-                                const SizedBox(height: 2),
-                                Text(f.desc,
-                                    style: TextStyle(
-                                        fontSize: 11, color: hintColor)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!isLast)
-                      Divider(
-                          height: 0.5,
-                          thickness: 0.5,
-                          indent: 16,
-                          endIndent: 16,
-                          color: dividerColor),
-                  ],
-                );
-              }),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cardBorder, width: 0.5),
+              ),
+              child: Column(
+                children: [
+                  _LinkRow(
+                    icon: Icons.menu_book_outlined,
+                    title: '功能介绍',
+                    subtitle: '在 GitHub 查看完整功能说明',
+                    textColor: textColor,
+                    hintColor: hintColor,
+                    dividerColor: dividerColor,
+                    onTap: () =>
+                        _openUrl('https://github.com/$_githubRepo#readme'),
+                    isLast: false,
+                  ),
+                  _LinkRow(
+                    icon: Icons.history_rounded,
+                    title: '更新日志',
+                    subtitle: '在 GitHub Releases 查看所有版本',
+                    textColor: textColor,
+                    hintColor: hintColor,
+                    dividerColor: dividerColor,
+                    onTap: () => _openUrl(
+                        'https://github.com/$_githubRepo/releases'),
+                    isLast: true,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
-
-          // ── 更新日志 ──
-          _SectionTitle('更新日志', textColor),
-          const SizedBox(height: 10),
-          ..._changelog.map((log) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: cardBorder, width: 0.5),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color:
-                                  const Color(0xFF378ADD).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(log.version,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF378ADD))),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(log.date,
-                              style: TextStyle(
-                                  fontSize: 12, color: hintColor)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ...log.items.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 5),
-                                  child: Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: hintColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(item,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: textColor,
-                                          height: 1.5)),
-                                ),
-                              ],
-                            ),
-                          )),
-                    ],
-                  ),
-                ),
-              )),
-          const SizedBox(height: 12),
 
           // ── 开源协议 ──
           _SectionTitle('开源协议', textColor),
@@ -338,8 +405,7 @@ class AboutPage extends StatelessWidget {
                   '本软件以 MIT 协议开源，允许任何人免费使用、复制、修改、合并、'
                   '发布、分发、再授权及销售本软件的副本，但须保留上述版权声明与本许可声明。\n\n'
                   '本软件按"原样"提供，不附带任何明示或暗示的担保。',
-                  style: TextStyle(
-                      fontSize: 12, color: hintColor, height: 1.65),
+                  style: TextStyle(fontSize: 12, color: hintColor, height: 1.65),
                 ),
               ],
             ),
@@ -355,15 +421,18 @@ class AboutPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: cardBorder, width: 0.5),
             ),
-            child: Column(
-              children: const [
+            child: const Column(
+              children: [
                 _DepRow('Zashboard', 'MIT · Zephyruso'),
                 _DepRow('flutter_inappwebview', 'Apache-2.0'),
                 _DepRow('dartssh2', 'MIT'),
                 _DepRow('archive', 'BSD-3-Clause'),
                 _DepRow('path_provider', 'BSD-3-Clause'),
                 _DepRow('shared_preferences', 'BSD-3-Clause'),
-                _DepRow('flutter_svg', 'MIT', isLast: true),
+                _DepRow('flutter_svg', 'MIT'),
+                _DepRow('http', 'BSD-3-Clause'),
+                _DepRow('open_file', 'MIT'),
+                _DepRow('url_launcher', 'BSD-3-Clause', isLast: true),
               ],
             ),
           ),
@@ -383,24 +452,6 @@ class AboutPage extends StatelessWidget {
   }
 }
 
-// ─── 数据模型 ──────────────────────────────────────────────────────────────────
-
-class _ChangelogItem {
-  final String version;
-  final String date;
-  final List<String> items;
-  const _ChangelogItem(
-      {required this.version, required this.date, required this.items});
-}
-
-class _Feature {
-  final IconData icon;
-  final String title;
-  final String desc;
-  const _Feature(
-      {required this.icon, required this.title, required this.desc});
-}
-
 // ─── 小组件 ────────────────────────────────────────────────────────────────────
 
 class _SectionTitle extends StatelessWidget {
@@ -411,11 +462,83 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: color),
+        style:
+            TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
       );
+}
+
+class _LinkRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color textColor;
+  final Color hintColor;
+  final Color dividerColor;
+  final VoidCallback onTap;
+  final bool isLast;
+
+  const _LinkRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.textColor,
+    required this.hintColor,
+    required this.dividerColor,
+    required this.onTap,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF378ADD).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(icon, size: 17, color: const Color(0xFF378ADD)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: textColor)),
+                      const SizedBox(height: 1),
+                      Text(subtitle,
+                          style: TextStyle(fontSize: 11, color: hintColor)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, size: 18, color: hintColor),
+              ],
+            ),
+          ),
+        ),
+        if (!isLast)
+          Divider(
+              height: 0.5,
+              thickness: 0.5,
+              indent: 16,
+              endIndent: 16,
+              color: dividerColor),
+      ],
+    );
+  }
 }
 
 class _DepRow extends StatelessWidget {
@@ -437,15 +560,13 @@ class _DepRow extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           child: Row(
             children: [
               Expanded(
                   child: Text(name,
                       style: TextStyle(fontSize: 13, color: textColor))),
-              Text(license,
-                  style: TextStyle(fontSize: 11, color: hintColor)),
+              Text(license, style: TextStyle(fontSize: 11, color: hintColor)),
             ],
           ),
         ),

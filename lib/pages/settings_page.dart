@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../services/clash_service.dart';
 import '../services/web_panel_service.dart';
-import '../main.dart';
 import 'about_page.dart';
+import 'developer_options_page.dart';
+import '../main.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -14,6 +15,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const _builtinPanelVersion = 'v3.0.0';
+
   final _hostController = TextEditingController();
   final _tokenController = TextEditingController();
   bool _obscureToken = true;
@@ -21,10 +24,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _saving = false;
   String? _testResult;
   bool _testSuccess = false;
-
-  bool _developerMode = false;
-  bool _showBall = false;
-  bool _showLogs = false;
 
   String? _webPanelVersion;
   bool _checkingUpdate = false;
@@ -47,12 +46,20 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         _hostController.text = prefs.getString('clash_host') ?? '';
         _tokenController.text = prefs.getString('clash_token') ?? '';
-        _developerMode = prefs.getBool('developer_mode') ?? false;
-        _showBall = prefs.getBool('show_floating_ball') ?? false;
-        _showLogs = prefs.getBool('show_logs') ?? false;
         _webPanelVersion = panelVersion;
       });
     }
+  }
+
+  Future<void> _setTheme(ThemeMode mode) async {
+    ProxlyApp.setThemeModeOf(context, mode); // 同步更新静态变量 + 触发父级重建
+    final prefs = await SharedPreferences.getInstance();
+    final str = mode == ThemeMode.light
+        ? 'light'
+        : mode == ThemeMode.dark
+            ? 'dark'
+            : 'system';
+    await prefs.setString('theme_mode', str);
   }
 
   Future<void> _checkForUpdate() async {
@@ -66,7 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) return;
       setState(() {
         _latestVersionInfo = info;
-        if (info.tag == _webPanelVersion) {
+        if (info.tag == (_webPanelVersion ?? _builtinPanelVersion)) {
           _updateMessage = '当前已是最新版本 ${info.tag}';
           _updateMessageIsError = false;
         }
@@ -110,25 +117,6 @@ class _SettingsPageState extends State<SettingsPage> {
     } finally {
       if (mounted) setState(() => _downloading = false);
     }
-  }
-
-  Future<void> _toggleDeveloperMode(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('developer_mode', value);
-    setState(() => _developerMode = value);
-  }
-
-  Future<void> _toggleShowBall(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('show_floating_ball', value);
-    setState(() => _showBall = value);
-    if (mounted) ProxlyApp.setBallVisibilityOf(context, value);
-  }
-
-  Future<void> _toggleShowLogs(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('show_logs', value);
-    setState(() => _showLogs = value);
   }
 
   Future<void> _saveSettings() async {
@@ -246,15 +234,75 @@ class _SettingsPageState extends State<SettingsPage> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('设置',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 28, fontWeight: FontWeight.w600, color: textColor)),
-            const SizedBox(height: 4),
-            Text('填写你的 Clash 连接信息',
-                style: TextStyle(fontSize: 13, color: hintColor)),
             const SizedBox(height: 24),
+
+            // ── 外观主题卡片 ─────────────────────────────────────────────────
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cardBorder, width: 0.5),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('外观主题',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: textColor)),
+                  const SizedBox(height: 14),
+                  // 浅色 / 深色 按钮
+                  Row(
+                    children: [
+                      _ThemeButton(
+                        label: '浅色',
+                        icon: Icons.light_mode_rounded,
+                        selected: ProxlyApp.activeThemeMode == ThemeMode.light,
+                        enabled: ProxlyApp.activeThemeMode != ThemeMode.system,
+                        isDark: isDark,
+                        onTap: () => _setTheme(ThemeMode.light),
+                      ),
+                      const SizedBox(width: 10),
+                      _ThemeButton(
+                        label: '深色',
+                        icon: Icons.dark_mode_rounded,
+                        selected: ProxlyApp.activeThemeMode == ThemeMode.dark,
+                        enabled: ProxlyApp.activeThemeMode != ThemeMode.system,
+                        isDark: isDark,
+                        onTap: () => _setTheme(ThemeMode.dark),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // 跟随系统 开关
+                  Row(
+                    children: [
+                      Text('跟随系统',
+                          style: TextStyle(fontSize: 13, color: textColor)),
+                      const Spacer(),
+                      Switch(
+                        value: ProxlyApp.activeThemeMode == ThemeMode.system,
+                        onChanged: (v) => _setTheme(
+                            v ? ThemeMode.system : ThemeMode.light),
+                        activeColor: const Color(0xFF378ADD),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── 连接配置卡片 ─────────────────────────────────────────────────
             Container(
               decoration: BoxDecoration(
                   color: cardBg,
@@ -283,12 +331,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       border: inputBorder,
                       enabledBorder: inputBorder,
                       focusedBorder: focusedBorder,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text('外部控制管理密钥',
+                  Text('外部控制密钥（可选）',
                       style: TextStyle(
                           fontSize: 11, color: labelColor, letterSpacing: 0.5)),
                   const SizedBox(height: 6),
@@ -307,8 +355,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       border: inputBorder,
                       enabledBorder: inputBorder,
                       focusedBorder: focusedBorder,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                       suffixIcon: IconButton(
                         icon: Icon(
                             _obscureToken
@@ -321,100 +369,103 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ),
+                  // 测试结果内嵌
+                  if (_testResult != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: _testSuccess
+                                ? const Color(0xFF1D9E75)
+                                : const Color(0xFFE24B4A),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _testResult!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _testSuccess
+                                  ? const Color(0xFF1D9E75)
+                                  : const Color(0xFFE24B4A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  // 按钮行
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _testing ? null : _testConnection,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: const Color(0xFF378ADD), width: 0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _testing
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFF378ADD)))
+                                  : const Text('测试连接',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF378ADD))),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: GestureDetector(
+                          onTap: _saving ? null : _saveSettings,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF378ADD),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _saving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white))
+                                  : const Text('保存',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.white)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            GestureDetector(
-              onTap: _testing ? null : _testConnection,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: cardBorder, width: 0.5)),
-                padding: const EdgeInsets.all(14),
-                child: Center(
-                  child: _testing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Color(0xFF378ADD)))
-                      : const Text('测试连接',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF378ADD))),
-                ),
-              ),
-            ),
-            if (_testResult != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: _testSuccess
-                      ? const Color(0xFFF0FDF4)
-                      : (isDark ? const Color(0xFF450a0a) : const Color(0xFFFEF2F2)),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: _testSuccess
-                          ? const Color(0xFFBBF7D0)
-                          : const Color(0xFFE24B4A),
-                      width: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                            color: _testSuccess
-                                ? const Color(0xFF1D9E75)
-                                : const Color(0xFFE24B4A),
-                            shape: BoxShape.circle)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Text(_testResult!,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: _testSuccess
-                                    ? const Color(0xFF166534)
-                                    : (isDark
-                                        ? const Color(0xFFFCA5A5)
-                                        : const Color(0xFF991B1B))))),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: _saving ? null : _saveSettings,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                    color: const Color(0xFF378ADD),
-                    borderRadius: BorderRadius.circular(14)),
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Text('保存',
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // ── 控制台面板更新 ────────────────────────────────────────
+
+            // ── 控制台面板 ───────────────────────────────────────────────────
             Container(
               decoration: BoxDecoration(
                 color: cardBg,
@@ -425,19 +476,16 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('控制台面板',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: textColor)),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      Text('版本来源',
-                          style: TextStyle(fontSize: 13, color: textColor)),
+                      Text('控制台面板',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: textColor)),
                       const Spacer(),
                       Text(
-                        _webPanelVersion ?? '内置版本',
+                        _webPanelVersion ?? _builtinPanelVersion,
                         style: TextStyle(fontSize: 12, color: hintColor),
                       ),
                     ],
@@ -470,13 +518,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                         if (_latestVersionInfo != null &&
-                            _latestVersionInfo!.tag != _webPanelVersion) ...[
+                            _latestVersionInfo!.tag !=
+                                (_webPanelVersion ?? _builtinPanelVersion)) ...[
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               '发现 ${_latestVersionInfo!.tag}',
-                              style:
-                                  TextStyle(fontSize: 12, color: hintColor),
+                              style: TextStyle(fontSize: 12, color: hintColor),
                             ),
                           ),
                           GestureDetector(
@@ -506,8 +554,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         backgroundColor: isDark
                             ? const Color(0xFF15191E)
                             : const Color(0xFFE2E8F0),
-                        valueColor: const AlwaysStoppedAnimation(
-                            Color(0xFF378ADD)),
+                        valueColor:
+                            const AlwaysStoppedAnimation(Color(0xFF378ADD)),
                         minHeight: 6,
                       ),
                     ),
@@ -532,108 +580,187 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 12),
-            // ─────────────────────────────────────────────────────────────
-            Container(
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: cardBorder, width: 0.5),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('开发者选项',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: textColor)),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: Text('启用流量编辑',
-                        style: TextStyle(fontSize: 13, color: textColor)),
-                    subtitle: Text('在首页长按提供商流量条可临时修改数值',
-                        style: TextStyle(fontSize: 11, color: hintColor)),
-                    value: _developerMode,
-                    onChanged: _toggleDeveloperMode,
-                    activeColor: const Color(0xFF378ADD),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const Divider(height: 24),
-                  SwitchListTile(
-                    title: Text('显示主题悬浮球',
-                        style: TextStyle(fontSize: 13, color: textColor)),
-                    subtitle: Text('屏幕上显示可拖动的深浅色切换按钮，长按拖动，点击切换',
-                        style: TextStyle(fontSize: 11, color: hintColor)),
-                    value: _showBall,
-                    onChanged: _toggleShowBall,
-                    activeColor: const Color(0xFF378ADD),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const Divider(height: 24),
-                  SwitchListTile(
-                    title: Text('显示日志选项卡',
-                        style: TextStyle(fontSize: 13, color: textColor)),
-                    subtitle: Text('在底部导航栏显示日志页面入口',
-                        style: TextStyle(fontSize: 11, color: hintColor)),
-                    value: _showLogs,
-                    onChanged: _toggleShowLogs,
-                    activeColor: const Color(0xFF378ADD),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
+
+            // ── 开发者选项（二级菜单） ────────────────────────────────────────
+            _NavRow(
+              icon: Icons.code_rounded,
+              title: '开发者选项',
+              subtitle: '调试与实验性功能',
+              cardBg: cardBg,
+              cardBorder: cardBorder,
+              textColor: textColor,
+              hintColor: hintColor,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const DeveloperOptionsPage()),
               ),
             ),
             const SizedBox(height: 12),
-            // ── 关于 ──────────────────────────────────────────────────────────
-            GestureDetector(
+
+            // ── 关于 ─────────────────────────────────────────────────────────
+            _NavRow(
+              icon: Icons.info_outline_rounded,
+              title: '关于 Proxly',
+              subtitle: '功能介绍、版本日志、开源协议',
+              cardBg: cardBg,
+              cardBorder: cardBorder,
+              textColor: textColor,
+              hintColor: hintColor,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AboutPage()),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: cardBorder, width: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF378ADD).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(Icons.info_outline_rounded,
-                          size: 18, color: Color(0xFF378ADD)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('关于 Proxly',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: textColor)),
-                          const SizedBox(height: 2),
-                          Text('功能介绍、版本日志、开源协议',
-                              style: TextStyle(
-                                  fontSize: 11, color: hintColor)),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 18, color: hintColor),
-                  ],
-                ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 主题选择按钮 ────────────────────────────────────────────────────────────
+
+class _ThemeButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool enabled;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ThemeButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.enabled,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = const Color(0xFF378ADD);
+    final disabledBg =
+        isDark ? const Color(0xFF1D232A) : const Color(0xFFF5F5F5);
+    final disabledText =
+        isDark ? const Color(0xFF3A4250) : const Color(0xFFCBD5E1);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? activeColor.withValues(alpha: 0.12)
+                : enabled
+                    ? Colors.transparent
+                    : disabledBg,
+            border: Border.all(
+              color: selected ? activeColor : disabledText,
+              width: selected ? 1.2 : 0.6,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 16,
+                  color: selected
+                      ? activeColor
+                      : enabled
+                          ? (isDark
+                              ? const Color(0xFF747E8B)
+                              : const Color(0xFF94A3B8))
+                          : disabledText),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
+                    color: selected
+                        ? activeColor
+                        : enabled
+                            ? (isDark
+                                ? const Color(0xFF747E8B)
+                                : const Color(0xFF94A3B8))
+                            : disabledText,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 通用导航行组件 ──────────────────────────────────────────────────────────
+
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color cardBg;
+  final Color cardBorder;
+  final Color textColor;
+  final Color hintColor;
+  final VoidCallback onTap;
+
+  const _NavRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.cardBg,
+    required this.cardBorder,
+    required this.textColor,
+    required this.hintColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cardBorder, width: 0.5),
+        ),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFF378ADD).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon, size: 18, color: const Color(0xFF378ADD)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: textColor)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 11, color: hintColor)),
+                ],
               ),
             ),
+            Icon(Icons.chevron_right_rounded, size: 18, color: hintColor),
           ],
         ),
       ),

@@ -37,6 +37,14 @@ class _KernelLogsTabState extends State<KernelLogsTab>
   }
 
   @override
+  void didUpdateWidget(KernelLogsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.host != widget.host || oldWidget.token != widget.token) {
+      _connect();
+    }
+  }
+
+  @override
   void dispose() {
     _ws?.close();
     _scroll.dispose();

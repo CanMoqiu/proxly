@@ -218,9 +218,21 @@ class _ProxyPageState extends State<ProxyPage> {
     if (_webViewController == null) return;
     final t = isDark ? 'dark' : 'light';
     _webViewController!.evaluateJavascript(source: """
-      localStorage.setItem('theme', '$t');
-      document.documentElement.setAttribute('data-theme', '$t');
-      document.documentElement.classList.toggle('dark', $isDark);
+      (function() {
+        // 关闭自动主题，让 default-theme 生效
+        localStorage.setItem('config/auto-theme', 'false');
+        localStorage.setItem('config/default-theme', '$t');
+        // 触发 VueUse useStorage 的 storage 事件监听
+        ['config/auto-theme', 'config/default-theme'].forEach(function(key) {
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: key,
+            newValue: localStorage.getItem(key),
+            storageArea: window.localStorage
+          }));
+        });
+        // 立即写 DOM，避免等待 Vue watcher 的下一个 tick
+        document.body.setAttribute('data-theme', '$t');
+      })();
     """);
   }
 

@@ -5,6 +5,8 @@ import 'proxy_page.dart';
 import 'settings_page.dart';
 import 'logs/logs_page.dart';
 
+final shellRouteObserver = RouteObserver<ModalRoute<void>>();
+
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -12,7 +14,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with RouteAware {
   int _currentIndex = 0;
   bool _showLogs = false;
 
@@ -22,10 +24,37 @@ class _MainShellState extends State<MainShell> {
     _loadPrefs();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    shellRouteObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void didPopNext() {
+    _loadPrefs();
+  }
+
+  @override
+  void dispose() {
+    shellRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
-      setState(() => _showLogs = prefs.getBool('show_logs') ?? false);
+      setState(() {
+        final newShowLogs = prefs.getBool('show_logs') ?? false;
+        final oldMaxIndex = _maxIndex;
+        final wasOnLastTab = _currentIndex == oldMaxIndex;
+        _showLogs = newShowLogs;
+        if (wasOnLastTab) {
+          _currentIndex = _maxIndex;
+        } else if (_currentIndex > _maxIndex) {
+          _currentIndex = _maxIndex;
+        }
+      });
     }
   }
 
